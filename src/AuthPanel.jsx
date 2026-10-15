@@ -17,19 +17,21 @@ export default function AuthPanel() {
     async function loadSession() {
       const { data, error } = await supabase.auth.getSession();
 
-      if (mounted) {
-        setUser(data.session?.user ?? null);
-        setLoading(false);
-        if (error) setMessage(error.message);
-      }
+      if (!mounted) return;
+
+      setUser(data.session?.user ?? null);
+      setLoading(false);
+
+      if (error) setMessage(error.message);
     }
 
     loadSession();
 
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((_event, session) => {
-        if (mounted) setUser(session?.user ?? null);
-      });
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
 
     return () => {
       mounted = false;
@@ -45,7 +47,7 @@ export default function AuthPanel() {
     try {
       if (mode === 'signup') {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password
         });
 
@@ -58,7 +60,7 @@ export default function AuthPanel() {
         );
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim(),
           password
         });
 
@@ -74,73 +76,107 @@ export default function AuthPanel() {
   }
 
   async function handleLogout() {
-    const { error } = await supabase.auth.signOut();
-    setMessage(error ? error.message : 'You have logged out.');
+    setBusy(true);
+    setMessage('');
+
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) throw error;
+
+      setMessage('You have logged out.');
+    } catch (error) {
+      setMessage(error.message || 'Logout failed.');
+    } finally {
+      setBusy(false);
+    }
   }
 
-  if (loading) return <p>Checking login status...</p>;
+  if (loading) {
+    return (
+      <div className="auth-panel">
+        <p>Checking login status...</p>
+      </div>
+    );
+  }
 
   return (
-    <section
-      id="account"
-      style={{
-        maxWidth: 460,
-        margin: '40px auto',
-        padding: 24,
-        borderRadius: 16,
-        background: '#fff',
-        boxShadow: '0 8px 30px rgba(0,0,0,0.08)'
-      }}
-    >
-      <h2>{user ? 'Your InfinityCare Account' :
-        mode === 'signup' ? 'Create your account' : 'Welcome back'}</h2>
+    <div className="auth-panel">
+      <span className="eyebrow">YOUR INFINITYCARE ACCOUNT</span>
+
+      <h2>
+        {user
+          ? 'Welcome to InfinityCare'
+          : mode === 'signup'
+            ? 'Create your account'
+            : 'Welcome back'}
+      </h2>
+
+      <p className="auth-description">
+        {user
+          ? 'You are signed in and ready to explore your wellness dashboard.'
+          : 'Sign in or create an account to get started.'}
+      </p>
 
       {user ? (
-        <>
-          <p>You are logged in as:</p>
-          <p>{user.email}</p>
-          <button className="btn btn-primary" onClick={handleLogout}>
-            Log out
+        <div className="auth-logged-in">
+          <div className="auth-user-icon">
+            <span>{user.email?.charAt(0).toUpperCase() || 'U'}</span>
+          </div>
+
+          <p>Logged in as</p>
+          <strong className="auth-email">{user.email}</strong>
+
+          <button
+            className="btn btn-primary"
+            onClick={handleLogout}
+            disabled={busy}
+          >
+            {busy ? 'Please wait...' : 'Log out'}
           </button>
-        </>
+        </div>
       ) : (
-        <form onSubmit={handleSubmit}>
+        <form className="auth-form" onSubmit={handleSubmit}>
           <label htmlFor="auth-email">Email address</label>
           <input
             id="auth-email"
             type="email"
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={event => setEmail(event.target.value)}
+            placeholder="you@example.com"
             autoComplete="email"
             required
-            style={{ display: 'block', width: '100%', padding: 12, margin: '8px 0 16px' }}
           />
 
-          <label htmlFor="auth-password">Password (minimum 8 characters)</label>
+          <label htmlFor="auth-password">Password</label>
           <input
             id="auth-password"
             type="password"
             value={password}
-            onChange={e => setPassword(e.target.value)}
+            onChange={event => setPassword(event.target.value)}
+            placeholder="Enter your password"
             autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
             minLength={8}
             required
-            style={{ display: 'block', width: '100%', padding: 12, margin: '8px 0 16px' }}
           />
 
           <button
-            className="btn btn-primary"
+            className="btn btn-primary auth-submit"
             type="submit"
             disabled={busy}
           >
-            {busy ? 'Please wait...' :
-              mode === 'signup' ? 'Create account' : 'Log in'}
+            {busy
+              ? 'Please wait...'
+              : mode === 'signup'
+                ? 'Create account'
+                : 'Log in'}
           </button>
 
-          <p>
+          <p className="auth-switch">
             {mode === 'signup'
-              ? 'Already registered? '
+              ? 'Already have an account? '
               : "Don't have an account? "}
+
             <button
               type="button"
               className="text-link"
@@ -155,7 +191,15 @@ export default function AuthPanel() {
         </form>
       )}
 
-      {message && <p role="status">{message}</p>}
-    </section>
+      {message && (
+        <p className="auth-message" role="status">
+          {message}
+        </p>
+      )}
+
+      <p className="auth-note">
+        Keep your password private. Never share your password with anyone.
+      </p>
+    </div>
   );
 }
