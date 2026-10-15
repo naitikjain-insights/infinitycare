@@ -1,54 +1,42 @@
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { supabase } from './lib/supabase';
+import {
+  Activity,
+  CalendarDays,
+  HeartPulse,
+  ShieldCheck,
+  Mail,
+  LockKeyhole,
+  Eye,
+  EyeOff,
+  LogIn,
+  UserRoundPlus,
+  Stethoscope,
+  Heart,
+} from 'lucide-react';
+import './AuthPanel.css';
 
 export default function AuthPanel() {
-  const [user, setUser] = useState(null);
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadSession() {
-      const { data, error } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-
-      if (error) setMessage(error.message);
-    }
-
-    loadSession();
-
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  async function handleSubmit(event) {
-    event.preventDefault();
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setLoading(true);
     setMessage('');
-    setBusy(true);
+    setError('');
 
     try {
       if (mode === 'signup') {
         const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password
+          email,
+          password,
         });
 
         if (error) throw error;
@@ -56,150 +44,234 @@ export default function AuthPanel() {
         setMessage(
           data.session
             ? 'Account created successfully!'
-            : 'Account created. Please check your email to confirm it.'
+            : 'Account created! Please check your email to verify your account.'
         );
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password
+          email,
+          password,
         });
 
         if (error) throw error;
-
-        setMessage('Login successful!');
+        setMessage('Login successful! Opening your dashboard...');
       }
-    } catch (error) {
-      setMessage(error.message || 'Something went wrong.');
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
-      setBusy(false);
+      setLoading(false);
     }
   }
 
-  async function handleLogout() {
-    setBusy(true);
+  async function handleForgotPassword() {
+    setError('');
     setMessage('');
 
-    try {
-      const { error } = await supabase.auth.signOut();
-
-      if (error) throw error;
-
-      setMessage('You have logged out.');
-    } catch (error) {
-      setMessage(error.message || 'Logout failed.');
-    } finally {
-      setBusy(false);
+    if (!email.trim()) {
+      setError('Please enter your email address first.');
+      return;
     }
-  }
 
-  if (loading) {
-    return (
-      <div className="auth-panel">
-        <p>Checking login status...</p>
-      </div>
-    );
+    setLoading(true);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+
+    if (error) setError(error.message);
+    else setMessage('Password reset instructions have been sent to your email.');
+
+    setLoading(false);
   }
 
   return (
-    <div className="auth-panel">
-      <span className="eyebrow">YOUR INFINITYCARE ACCOUNT</span>
-
-      <h2>
-        {user
-          ? 'Welcome to InfinityCare'
-          : mode === 'signup'
-            ? 'Create your account'
-            : 'Welcome back'}
-      </h2>
-
-      <p className="auth-description">
-        {user
-          ? 'You are signed in and ready to explore your wellness dashboard.'
-          : 'Sign in or create an account to get started.'}
-      </p>
-
-      {user ? (
-        <div className="auth-logged-in">
-          <div className="auth-user-icon">
-            <span>{user.email?.charAt(0).toUpperCase() || 'U'}</span>
+    <main className="ic-auth-page">
+      <section className="ic-auth-shell">
+        <aside className="ic-brand-panel">
+          <div className="ic-brand-logo">
+            <div className="ic-logo-symbol">
+              <HeartPulse size={35} strokeWidth={2.5} />
+            </div>
+            <div className="ic-brand-name">
+              <span>INFINITY</span><strong>CARE</strong>
+            </div>
           </div>
 
-          <p>Logged in as</p>
-          <strong className="auth-email">{user.email}</strong>
+          <div className="ic-brand-line">
+            <span />
+            <Activity size={28} />
+            <span />
+          </div>
 
-          <button
-            className="btn btn-primary"
-            onClick={handleLogout}
-            disabled={busy}
-          >
-            {busy ? 'Please wait...' : 'Log out'}
-          </button>
-        </div>
-      ) : (
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <label htmlFor="auth-email">Email address</label>
-          <input
-            id="auth-email"
-            type="email"
-            value={email}
-            onChange={event => setEmail(event.target.value)}
-            placeholder="you@example.com"
-            autoComplete="email"
-            required
-          />
-
-          <label htmlFor="auth-password">Password</label>
-          <input
-            id="auth-password"
-            type="password"
-            value={password}
-            onChange={event => setPassword(event.target.value)}
-            placeholder="Enter your password"
-            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-            minLength={8}
-            required
-          />
-
-          <button
-            className="btn btn-primary auth-submit"
-            type="submit"
-            disabled={busy}
-          >
-            {busy
-              ? 'Please wait...'
-              : mode === 'signup'
-                ? 'Create account'
-                : 'Log in'}
-          </button>
-
-          <p className="auth-switch">
-            {mode === 'signup'
-              ? 'Already have an account? '
-              : "Don't have an account? "}
-
-            <button
-              type="button"
-              className="text-link"
-              onClick={() => {
-                setMode(mode === 'signup' ? 'login' : 'signup');
-                setMessage('');
-              }}
-            >
-              {mode === 'signup' ? 'Log in' : 'Sign up'}
-            </button>
+          <p className="ic-brand-tagline">
+            Your Health. Our Priority. Always.
           </p>
-        </form>
-      )}
 
-      {message && (
-        <p className="auth-message" role="status">
-          {message}
-        </p>
-      )}
+          <p className="ic-brand-description">
+            Your trusted healthcare partner. Book appointments, connect with
+            specialists, and take charge of your wellbeing — all in one place.
+          </p>
 
-      <p className="auth-note">
-        Keep your password private. Never share your password with anyone.
-      </p>
-    </div>
+          <div className="ic-features">
+            <div className="ic-feature">
+              <div className="ic-feature-icon"><CalendarDays size={25} /></div>
+              <div>
+                <h3>Easy Appointments</h3>
+                <p>Book appointments with ease.</p>
+              </div>
+            </div>
+
+            <div className="ic-feature">
+              <div className="ic-feature-icon"><Stethoscope size={25} /></div>
+              <div>
+                <h3>Expert Doctors</h3>
+                <p>Connect with healthcare professionals.</p>
+              </div>
+            </div>
+
+            <div className="ic-feature">
+              <div className="ic-feature-icon"><ShieldCheck size={25} /></div>
+              <div>
+                <h3>Secure &amp; Private</h3>
+                <p>Your account matters to us.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="ic-trust-note">
+            <ShieldCheck size={35} />
+            <p>Healthcare made simpler, safer, and more accessible.</p>
+          </div>
+
+          <div className="ic-decor ic-decor-one" />
+          <div className="ic-decor ic-decor-two" />
+        </aside>
+
+        <section className="ic-form-panel">
+          <div className="ic-mobile-logo">
+            <HeartPulse size={32} />
+            <span>INFINITY<strong>CARE</strong></span>
+          </div>
+
+          <div className="ic-account-label">
+            <ShieldCheck size={19} />
+            YOUR INFINITYCARE ACCOUNT
+          </div>
+
+          <h1>{mode === 'login' ? 'Welcome Back!' : 'Create Account'}</h1>
+
+          <p className="ic-form-subtitle">
+            {mode === 'login'
+              ? 'Sign in to continue to your InfinityCare experience.'
+              : 'Join InfinityCare and take the first step towards better wellbeing.'}
+          </p>
+
+          <div className="ic-heart-divider">
+            <span />
+            <Heart size={18} />
+            <span />
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <label className="ic-field-label" htmlFor="ic-email">
+              Email address
+            </label>
+            <div className="ic-input-wrap">
+              <Mail size={20} />
+              <input
+                id="ic-email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+              />
+            </div>
+
+            <label className="ic-field-label" htmlFor="ic-password">
+              Password
+            </label>
+            <div className="ic-input-wrap">
+              <LockKeyhole size={20} />
+              <input
+                id="ic-password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                minLength={6}
+                required
+              />
+              <button
+                className="ic-eye-button"
+                type="button"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+
+            {mode === 'login' && (
+              <button
+                className="ic-forgot-button"
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={loading}
+              >
+                Forgot password?
+              </button>
+            )}
+
+            {error && <div className="ic-message ic-error">{error}</div>}
+            {message && <div className="ic-message ic-success">{message}</div>}
+
+            <button className="ic-submit-button" type="submit" disabled={loading}>
+              {loading ? (
+                'Please wait...'
+              ) : mode === 'login' ? (
+                <><LogIn size={20} /> Log In</>
+              ) : (
+                <><UserRoundPlus size={20} /> Create Account</>
+              )}
+            </button>
+          </form>
+
+          <div className="ic-or-divider"><span />or<span /></div>
+
+          <p className="ic-switch-text">
+            {mode === 'login'
+              ? "Don't have an account?"
+              : 'Already have an account?'}
+          </p>
+
+          <button
+            className="ic-switch-button"
+            type="button"
+            onClick={() => {
+              setMode(mode === 'login' ? 'signup' : 'login');
+              setError('');
+              setMessage('');
+            }}
+          >
+            {mode === 'login' ? (
+              <><UserRoundPlus size={20} /> Create an Account</>
+            ) : (
+              <><LogIn size={20} /> Sign In Instead</>
+            )}
+          </button>
+
+          <div className="ic-privacy-note">
+            <LockKeyhole size={20} />
+            <p>Keep your password private. Never share your password with anyone.</p>
+          </div>
+
+          <p className="ic-footer-text">
+            Made with <Heart size={13} fill="currentColor" /> for better healthcare
+          </p>
+        </section>
+      </section>
+    </main>
   );
 }
