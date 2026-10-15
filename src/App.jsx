@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 import WellnessDashboard from './WellnessDashboard';
+import AuthPanel from './AuthPanel';
 
 const doctors = [
   {
@@ -217,6 +218,7 @@ export default function App() {
             <a href="#about" onClick={() => setMobileMenu(false)}>About us</a>
             <a href="#health-library" onClick={() => setMobileMenu(false)}>Health library</a>
             <a href="#wellness-dashboard" onClick={() => setMobileMenu(false)}>Wellness Dashboard</a>
+            <a href="#account" onClick={() => setMobileMenu(false)}>Login / Sign up</a>
             <button className="btn btn-primary nav-cta" onClick={() => { setMobileMenu(false); openBooking(); }}>
               Book appointment <ArrowUpRight size={17} />
             </button>
@@ -345,10 +347,16 @@ export default function App() {
           </div>
         </section>
 
-        {/* Wellness dashboard added without replacing existing sections */}
         <section id="wellness-dashboard" className="section">
           <div className="container">
             <WellnessDashboard />
+          </div>
+        </section>
+
+        {/* NEW: Login and Sign up */}
+        <section id="account" className="section account-section">
+          <div className="container">
+            <AuthPanel />
           </div>
         </section>
 
@@ -376,7 +384,7 @@ export default function App() {
       <footer className="site-footer">
         <div className="container footer-main">
           <div className="footer-brand-col"><Logo light /><p>Thoughtful healthcare, useful guidance and support for every step of your wellbeing journey.</p><div className="social-links"><a href="#contact" aria-label="Facebook"><Facebook size={18} /></a><a href="#contact" aria-label="Instagram"><Instagram size={18} /></a><a href="#contact" aria-label="LinkedIn"><Linkedin size={18} /></a></div></div>
-          <div className="footer-links"><h3>Explore</h3><a href="#services">Our services</a><a href="#doctors">Find a doctor</a><a href="#about">About InfinityCare</a><a href="#health-library">Health library</a><a href="#wellness-dashboard">Wellness Dashboard</a></div>
+          <div className="footer-links"><h3>Explore</h3><a href="#services">Our services</a><a href="#doctors">Find a doctor</a><a href="#about">About InfinityCare</a><a href="#health-library">Health library</a><a href="#wellness-dashboard">Wellness Dashboard</a><a href="#account">Login / Sign up</a></div>
           <div className="footer-links"><h3>Patient support</h3><a href="#contact">Contact us</a><a href="#doctors">Appointments</a><a href="#health-disclaimer">Health disclaimer</a><a href="#home">Back to top ↑</a></div>
           <div className="footer-newsletter"><h3>Wellness, in your inbox</h3><p>Helpful reminders and health inspiration, when available.</p><button className="btn btn-outline footer-contact-btn" onClick={() => window.location.href = 'mailto:hello@infinitycare.example'}>Contact our team <ArrowRight size={16} /></button></div>
         </div>
